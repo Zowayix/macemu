@@ -488,24 +488,9 @@ static inline int sdl_display_height(void)
 	return height;
 }
 
-// Check whether specified mode is available
-static bool has_mode(int type, int width, int height, int depth)
-{
-	// Filter out out-of-bounds resolutions
-	if (width > sdl_display_width() || height > sdl_display_height())
-		return false;
-
-	// Whatever size it is, beyond what we've checked, we'll scale to/from as appropriate.
-	return true;
-}
-
 // Add mode to list of supported modes
 static void add_mode(int type, int width, int height, int resolution_id, int bytes_per_row, int depth)
 {
-	// Filter out unsupported modes
-	if (!has_mode(type, width, height, depth))
-		return;
-
 	// Fill in VideoMode entry
 	VIDEO_MODE mode;
 #ifdef SHEEPSHAVER
@@ -720,17 +705,24 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 	int window_width = width;
 	int window_height = height;
 	Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI;
-	const int window_flags_to_monitor = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	
+	SDL_DisplayMode desktop_mode;
+	if (SDL_GetDesktopDisplayMode(0, &desktop_mode) != 0) {
+		shutdown_sdl_video();
+		return NULL;
+	}
+
 	if (flags & SDL_WINDOW_FULLSCREEN) {
-		SDL_DisplayMode desktop_mode;
-		if (SDL_GetDesktopDisplayMode(0, &desktop_mode) != 0) {
-			shutdown_sdl_video();
-			return NULL;
-		}
 		window_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 		window_width = desktop_mode.w;
 		window_height = desktop_mode.h;
+	} else {
+		if (window_height > desktop_mode.h) {
+			window_height = desktop_mode.h;
+		}
+		if (window_width > desktop_mode.w) {
+			window_width = desktop_mode.w;
+		}
 	}
 	
 	if (sdl_window) {
@@ -739,7 +731,7 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 		old_window_flags = SDL_GetWindowFlags(sdl_window);
 		if (old_window_width != window_width ||
 			old_window_height != window_height ||
-			(old_window_flags & window_flags_to_monitor) != (window_flags & window_flags_to_monitor))
+			(old_window_flags & window_flags) != (window_flags & window_flags))
 		{
 			delete_sdl_video_window();
 		}
@@ -878,7 +870,12 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 		return NULL;
 	}
 
-	SDL_RenderSetIntegerScale(sdl_renderer, PrefsFindBool("scale_integer") ? SDL_TRUE : SDL_FALSE);
+	//If you try to downscale with SDL_RenderSetIntegerScale I guess it just doesn't like that and shows a blank screen instead, booo
+	if (height <= desktop_mode.h && width <= desktop_mode.w){
+		SDL_RenderSetIntegerScale(sdl_renderer, PrefsFindBool("scale_integer") ? SDL_TRUE : SDL_FALSE);
+	} else {
+		SDL_RenderSetIntegerScale(sdl_renderer, SDL_FALSE);
+	}
 
     return guest_surface;
 }
@@ -1412,11 +1409,7 @@ bool VideoInit(bool classic)
 	}
 	if (default_width <= 0)
 		default_width = sdl_display_width();
-	else if (default_width > sdl_display_width())
-		default_width = sdl_display_width();
 	if (default_height <= 0)
-		default_height = sdl_display_height();
-	else if (default_height > sdl_display_height())
 		default_height = sdl_display_height();
 
 	// Mac screen depth follows X depth
@@ -1483,8 +1476,6 @@ bool VideoInit(bool classic)
 			for (int i = 0; video_modes[i].w != 0; i++) {
 				const int w = video_modes[i].w;
 				const int h = video_modes[i].h;
-				if (i > 0 && (w >= default_width || h >= default_height))
-					continue;
 				for (int d = VIDEO_DEPTH_1BIT; d <= default_depth; d++)
 					add_mode(display_type, w, h, video_modes[i].resolution_id, TrivialBytesPerRow(w, (video_depth)d), d);
 			}
@@ -1493,8 +1484,6 @@ bool VideoInit(bool classic)
 		for (int i = 0; video_modes[i].w != 0; i++) {
 			const int w = video_modes[i].w;
 			const int h = video_modes[i].h;
-			if (i > 0 && (w >= default_width || h >= default_height))
-				continue;
 			for (int d = VIDEO_DEPTH_1BIT; d <= default_depth; d++)
 				add_mode(display_type, w, h, video_modes[i].resolution_id, TrivialBytesPerRow(w, (video_depth)d), d);
 		}
@@ -1661,7 +1650,9 @@ static void do_toggle_fullscreen(void)
 			SDL_SetWindowFullscreen(sdl_window, 0);
 			const VIDEO_MODE &mode = drv->mode;
 			int m = get_mag_rate();
-			SDL_SetWindowSize(sdl_window, m * VIDEO_MODE_X, m * VIDEO_MODE_Y);
+			int total_width = m * VIDEO_MODE_X;
+			int total_height = m * VIDEO_MODE_Y;
+			SDL_SetWindowSize(sdl_window, total_width > sdl_display_width() ? sdl_display_width() : total_width, total_height > sdl_display_height() ? sdl_display_height() : total_height);
 			SDL_SetWindowGrab(sdl_window, SDL_FALSE);
 		} else {
 			display_type = DISPLAY_SCREEN;
