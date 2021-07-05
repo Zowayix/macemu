@@ -720,7 +720,7 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 	int window_width = width;
 	int window_height = height;
 	Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI;
-	const int window_flags_to_monitor = SDL_WINDOW_FULLSCREEN;
+	const int window_flags_to_monitor = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	
 	if (flags & SDL_WINDOW_FULLSCREEN) {
 		SDL_DisplayMode desktop_mode;
@@ -728,13 +728,9 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 			shutdown_sdl_video();
 			return NULL;
 		}
-#ifdef __MACOSX__
 		window_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 		window_width = desktop_mode.w;
 		window_height = desktop_mode.h;
-#else
-		window_flags |= SDL_WINDOW_FULLSCREEN;
-#endif
 	}
 	
 	if (sdl_window) {
@@ -1018,7 +1014,7 @@ void driver_base::set_video_mode(int flags)
 
 void driver_base::init()
 {
-	set_video_mode(display_type == DISPLAY_SCREEN ? SDL_WINDOW_FULLSCREEN : 0);
+	set_video_mode(display_type == DISPLAY_SCREEN ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 	int aligned_height = (VIDEO_MODE_Y + 15) & ~15;
 
 #ifdef ENABLE_VOSF
@@ -1669,11 +1665,7 @@ static void do_toggle_fullscreen(void)
 			SDL_SetWindowGrab(sdl_window, SDL_FALSE);
 		} else {
 			display_type = DISPLAY_SCREEN;
-#ifdef __MACOSX__
 			SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-#else
-			SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
-#endif
 			SDL_SetWindowGrab(sdl_window, SDL_TRUE);
 		}
 	}
