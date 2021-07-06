@@ -848,7 +848,6 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 	}
 	
 	if(!joystick){
-		//TODO: Create prefs items for enable/disable joystick, joystick index to use
 		joystick = SDL_JoystickOpen(0);
 		if(!joystick){
 			printf("Oh dear, unable to open joystick %d: %s\n", 0, SDL_GetError());
@@ -2246,36 +2245,34 @@ static void handle_events(void)
 			SDL_Event & event = events[i];
 			
 			switch (event.type) {
-				
-			//TODO: Handle SDL_JOYSTICKADDED and open the joystick if we haven't been able to do that and jdevice.which == the index we want; handle SDL_JOYSTICKREMOVED I guess (need to get the instance ID when we open the joystick; close it when it's removed and then set to null I guess)
-			
+							
 			case SDL_JOYBUTTONDOWN: {
 				//No need to set ctrl_down etc, unless you want a button press (that activates a modifier key) to potentially trigger a hotkey, I don't consider that expected behaviour
 				unsigned int button = event.jbutton.button;
-				if (button == 0){ //Bottom button usually
-					ADBKeyDown(0x31); //space
-				} else if (button == 1){ //Right button usually
-					ADBKeyDown(0x36); //Left control
-				} else if (button == 2){ //Left button usually
-					ADBKeyDown(0x3a); //left alt
-				} else if (button == 3){ //Top button usually
-					ADBKeyDown(0x37); //left cmd
-				} else if (button == 4){ //Usually LB
-					ADBKeyDown(0x38); //left shift
-				} else if (button == 5){ //Usually RB
-					ADBKeyDown(0x2c); //slashy boi
-				} else if (button == 6){ //Usually select
-					ADBKeyDown(0x35); //esc
-				} else if (button == 7){ //ususally start
-					ADBKeyDown(0x24); //return (or enter if you prefer)
-				} else if (button == 13){ //PS3 controllers have buttons for dpad instead of a hat
-					ADBKeyDown(0x3e); //up
+				if (button == 0){
+					ADBKeyDown(0x31);
+				} else if (button == 1){
+					ADBKeyDown(0x36);
+				} else if (button == 2){
+					ADBKeyDown(0x3a);
+				} else if (button == 3){
+					ADBKeyDown(0x37);
+				} else if (button == 4){
+					ADBKeyDown(0x38);
+				} else if (button == 5){
+					ADBKeyDown(0x2c);
+				} else if (button == 6){
+					ADBKeyDown(0x35);
+				} else if (button == 7){
+					ADBKeyDown(0x24);
+				} else if (button == 13){
+					ADBKeyDown(0x3e);
 				} else if (button == 14){
-					ADBKeyDown(0x3d); //down
+					ADBKeyDown(0x3d);
 				} else if (button == 15){
-					ADBKeyDown(0x3b); //left
+					ADBKeyDown(0x3b);
 				} else if (button == 16){
-					ADBKeyDown(0x3c); //right
+					ADBKeyDown(0x3c);
 				}
 				break;
 			}
