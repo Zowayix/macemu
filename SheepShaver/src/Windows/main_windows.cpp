@@ -203,7 +203,7 @@ int main(int argc, char **argv){
 //	KernelInit();
 
 	// Initialize SDL system
-	int sdl_flags = 0;
+	int sdl_flags = SDL_INIT_JOYSTICK;
 #ifdef USE_SDL_VIDEO
 	sdl_flags |= SDL_INIT_VIDEO;
 #endif

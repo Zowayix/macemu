@@ -156,6 +156,9 @@ static bool sdl_palette_changed = false;			// Flag: Palette changed, redraw thre
 static bool toggle_fullscreen = false;
 static bool did_add_event_watch = false;
 
+static SDL_Joystick* joystick = NULL;
+static unsigned int joystick_hat_pos = SDL_HAT_CENTERED;
+
 static bool mouse_grabbed = false;
 
 // Mutex to protect SDL events
@@ -652,6 +655,9 @@ static void shutdown_sdl_video()
 {
 	delete_sdl_video_surfaces();
 	delete_sdl_video_window();
+	if(joystick){
+		SDL_JoystickClose(joystick);
+	}
 }
 
 static int get_mag_rate()
@@ -839,6 +845,14 @@ static SDL_Surface * init_sdl_video(int width, int height, int bpp, Uint32 flags
 		SDL_RenderSetIntegerScale(sdl_renderer, PrefsFindBool("scale_integer") ? SDL_TRUE : SDL_FALSE);
 	} else {
 		SDL_RenderSetIntegerScale(sdl_renderer, SDL_FALSE);
+	}
+	
+	if(!joystick){
+		//TODO: Create prefs items for enable/disable joystick, joystick index to use
+		joystick = SDL_JoystickOpen(0);
+		if(!joystick){
+			printf("Oh dear, unable to open joystick %d: %s\n", 0, SDL_GetError());
+		}
 	}
 
     return guest_surface;
@@ -2232,7 +2246,127 @@ static void handle_events(void)
 			SDL_Event & event = events[i];
 			
 			switch (event.type) {
-
+				
+			//TODO: Handle SDL_JOYSTICKADDED and open the joystick if we haven't been able to do that and jdevice.which == the index we want; handle SDL_JOYSTICKREMOVED I guess (need to get the instance ID when we open the joystick; close it when it's removed and then set to null I guess)
+			
+			case SDL_JOYBUTTONDOWN: {
+				//No need to set ctrl_down etc, unless you want a button press (that activates a modifier key) to potentially trigger a hotkey, I don't consider that expected behaviour
+				unsigned int button = event.jbutton.button;
+				if (button == 0){ //Bottom button usually
+					ADBKeyDown(0x31); //space
+				} else if (button == 1){ //Right button usually
+					ADBKeyDown(0x36); //Left control
+				} else if (button == 2){ //Left button usually
+					ADBKeyDown(0x3a); //left alt
+				} else if (button == 3){ //Top button usually
+					ADBKeyDown(0x37); //left cmd
+				} else if (button == 4){ //Usually LB
+					ADBKeyDown(0x38); //left shift
+				} else if (button == 5){ //Usually RB
+					ADBKeyDown(0x2c); //slashy boi
+				} else if (button == 6){ //Usually select
+					ADBKeyDown(0x35); //esc
+				} else if (button == 7){ //ususally start
+					ADBKeyDown(0x24); //return (or enter if you prefer)
+				} else if (button == 13){ //PS3 controllers have buttons for dpad instead of a hat
+					ADBKeyDown(0x3e); //up
+				} else if (button == 14){
+					ADBKeyDown(0x3d); //down
+				} else if (button == 15){
+					ADBKeyDown(0x3b); //left
+				} else if (button == 16){
+					ADBKeyDown(0x3c); //right
+				}
+				break;
+			}
+			case SDL_JOYBUTTONUP: {
+				unsigned int button = event.jbutton.button;
+				if (button == 0){
+					ADBKeyUp(0x31);
+				} else if (button == 1){
+					ADBKeyUp(0x36);
+				} else if (button == 2){
+					ADBKeyUp(0x3a);
+				} else if (button == 3){
+					ADBKeyUp(0x37);
+				} else if (button == 4){
+					ADBKeyUp(0x38);
+				} else if (button == 5){
+					ADBKeyUp(0x2c);
+				} else if (button == 6){
+					ADBKeyUp(0x35);
+				} else if (button == 7){
+					ADBKeyUp(0x24);
+				} else if (button == 13){
+					ADBKeyUp(0x3e);
+				} else if (button == 14){
+					ADBKeyUp(0x3d);
+				} else if (button == 15){
+					ADBKeyUp(0x3b);
+				} else if (button == 16){
+					ADBKeyUp(0x3c);
+				}
+				break;
+			}
+			
+			case SDL_JOYHATMOTION: {
+				unsigned int hat = event.jhat.hat;
+				if (hat == 0){
+					//Just ignore any other hats on whatever controller has more than one hat, otherwise I might get confused
+					unsigned int new_position = event.jhat.value;
+					//Diagonals are a combined bitflag of the two directions
+					if((new_position & SDL_HAT_UP) && !(joystick_hat_pos & SDL_HAT_UP)){
+						ADBKeyDown(0x3e);
+					}
+					if((new_position & SDL_HAT_DOWN) && !(joystick_hat_pos & SDL_HAT_DOWN)){
+						ADBKeyDown(0x3d);
+					}
+					if((new_position & SDL_HAT_LEFT) && !(joystick_hat_pos & SDL_HAT_LEFT)){
+						ADBKeyDown(0x3b);
+					}
+					if((new_position & SDL_HAT_RIGHT) && !(joystick_hat_pos & SDL_HAT_RIGHT)){
+						ADBKeyDown(0x3c);
+					}
+					
+					
+					if(!(new_position & SDL_HAT_UP) && (joystick_hat_pos & SDL_HAT_UP)){
+						ADBKeyUp(0x3e);
+					}
+					if(!(new_position & SDL_HAT_DOWN) && (joystick_hat_pos & SDL_HAT_DOWN)){
+						ADBKeyUp(0x3d);
+					}
+					if(!(new_position & SDL_HAT_LEFT) && (joystick_hat_pos & SDL_HAT_LEFT)){
+						ADBKeyUp(0x3b);
+					}
+					if(!(new_position & SDL_HAT_RIGHT) && (joystick_hat_pos & SDL_HAT_RIGHT)){
+						ADBKeyUp(0x3c);
+					}
+					joystick_hat_pos = new_position;
+				}
+				break;
+			}
+			
+			//~ case SDL_JOYAXISMOTION: {
+				//~ unsigned int axis = event.jaxis.axis;
+				//~ signed int value = event.jaxis.value;
+				//~ if(axis == 3){ //Usually right stick left/right
+					//~ //TODO: If mouse grabbed we are in relative mode - we need to keep track of things I guess
+					//~ if(!mouse_grabbed){
+						//~ drv->mouse_moved((value + 32768) / 32768);
+					//~ }
+				//~ }
+				//~ break;
+			//~ }
+			
+			case SDL_JOYBALLMOTION: {
+				//Untested - I am just assuming this works like I think it does, but I don't have a joystick with a trackball
+				if(mouse_grabbed){
+					drv->mouse_moved(event.jball.xrel, event.jball.yrel);
+				} 
+				//TODO: If mouse is not grabbed, we need to somehow get an absolute coordinate to pass to mouse_moved - can we get current cursor position?
+				break;
+			}
+				
 			// Mouse button
 			case SDL_MOUSEBUTTONDOWN: {
 				unsigned int button = event.button.button;

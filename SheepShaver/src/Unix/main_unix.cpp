@@ -660,7 +660,7 @@ static bool install_signal_handlers(void)
 static std::string sdl_vmdir;
 
 static bool init_sdl(){
-	int sdl_flags = 0;
+	int sdl_flags = SDL_INIT_JOYSTICK;
 #ifdef USE_SDL_VIDEO
 	sdl_flags |= SDL_INIT_VIDEO;
 #endif
