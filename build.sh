@@ -11,8 +11,7 @@ popd
 
 pushd SheepShaver/src/Unix
 NO_CONFIGURE=1 ./autogen.sh
-#--with-bincue broke last time I tried it, should do that again
-./configure --enable-standalone-gui --enable-addressing=direct
+./configure --enable-standalone-gui --enable-addressing=direct --with-bincue
 make -j`nproc`
 cp SheepShaver SheepShaverGUI ../../../build
 
