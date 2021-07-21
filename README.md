@@ -1,4 +1,6 @@
-Fork aimed at adding usability features for gaming, maybe I will succeed at that, maybe I will abandon it like many other projects
+Fork aimed at adding usability features for gaming, maybe I will succeed at that, maybe I will abandon it like many other projects  
+
+I haven't tested if anything I'm doing actually works on Windows, nor do I have the means to know if it'll work on Mac; too bad for you and also if you want to still run the thing on an Amiga or anything like that, that is your own problem and I don't care and some of these other forks I've yoinked have ripped that code out which I am all for  
 
 Current status:
 - Allow changing the emulated screen resolution without messing with the host (very handy for games that want you to switch resolutions), even resolutions bigger than your screen
